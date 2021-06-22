@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Item;
+use App\Repository\ItemRepository;
 use App\Service\ItemService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -19,17 +20,18 @@ class ItemController extends AbstractController
      * @Route("/item", name="item_list", methods={"GET"})
      * @IsGranted("ROLE_USER")
      */
-    public function list(): JsonResponse
+    public function list(ItemRepository $itemRepository): JsonResponse
     {
-        $items = $this->getDoctrine()->getRepository(Item::class)->findBy(['user' => $this->getUser()]);
+        $items = $itemRepository->findBy(['user' => $this->getUser()]);
 
         $allItems = [];
         foreach ($items as $item) {
-            $oneItem['id'] = $item->getId();
-            $oneItem['data'] = $item->getData();
-            $oneItem['created_at'] = $item->getCreatedAt();
-            $oneItem['updated_at'] = $item->getUpdatedAt();
-            $allItems[] = $oneItem;
+            $allItems[] = [
+                'id' => $item->getId(),
+                'data' => $item->getData(),
+                'created_at' => $item->getCreatedAt(),
+                'updated_at' => $item->getUpdatedAt(),
+            ];
         }
 
         return $this->json($allItems);
@@ -49,7 +51,38 @@ class ItemController extends AbstractController
 
         $itemService->create($this->getUser(), $data);
 
-        return $this->json([]);
+        return $this->json(['success' => true], Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/item", name="item_update", methods={"PUT"})
+     * @IsGranted("ROLE_USER")
+     */
+    public function update(Request $request, ItemService $itemService, ItemRepository $itemRepository)
+    {
+        $requestData = json_decode($request->getContent());
+        if (is_null($requestData->id) OR is_null($requestData->data)) {
+            return $this->json(['error' => 'You must provide item id and new data.'], Response::HTTP_BAD_REQUEST);
+        }
+        $itemId = $requestData->id;
+        $data = $requestData->data;
+        
+        $item = $itemService->getById($itemId);
+
+        if (is_null($item)) {
+            return $this->json(
+                ['error' => 'Item with id: ' . $itemId . ' doesn`t exist.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+        
+        if($item->getUser()->getId() !== $this->getUser()->getId() ) {
+            return $this->json(['error' => 'You can not update other`s items.']);
+        }
+
+        $itemService->update($item, $data);
+
+        return $this->json(['success' => true],Response::HTTP_OK);
     }
 
     /**
@@ -72,6 +105,6 @@ class ItemController extends AbstractController
         $manager->remove($item);
         $manager->flush();
 
-        return $this->json([]);
+        return $this->json([], Response::HTTP_NO_CONTENT);
     }
 }
