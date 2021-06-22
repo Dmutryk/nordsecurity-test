@@ -2,10 +2,13 @@
 
 namespace App;
 
+use App\Database\Types\Encrypted;
+use Defuse\Crypto\Key;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Doctrine\DBAL\Types\Type;
 
 class Kernel extends BaseKernel
 {
@@ -35,6 +38,27 @@ class Kernel extends BaseKernel
         } else {
             $path = \dirname(__DIR__).'/config/routes.php';
             (require $path)($routes->withPath($path), $this);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function boot()
+    {
+        parent::boot();
+        $this->addCustomDbTypes();
+    }
+    
+    private function addCustomDbTypes()
+    {
+        if (!Type::hasType('encrypted')) {
+            Type::addType('encrypted', 'App\Database\Types\Encrypted');
+            $key = Key::loadFromAsciiSafeString($_ENV['CRYPTO_KEY']);
+
+            /** @var Encrypted $type */
+            $type = Type::getType('encrypted');
+            $type->setKey($key);
         }
     }
 }

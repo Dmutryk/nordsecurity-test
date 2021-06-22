@@ -20,3 +20,7 @@ make tests
 ### Postman requests collection
 
 You can import all available API calls to Postman using `postman_collection.json` file
+
+### To generate a crypto key:
+1. run from CLI: `docker-compose exec php vendor/bin/generate-defuse-key`
+2. Insert that key to the `.env` file to `CRYPTO_KEY` variable

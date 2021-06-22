@@ -6,10 +6,12 @@ use DateTime;
 use DateTimeInterface;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\ItemRepository;
+use Doctrine\ORM\Mapping\Index;
 
 /**
  * @ORM\Entity(repositoryClass=ItemRepository::class)
  * @ORM\HasLifecycleCallbacks
+ * @ORM\Table(indexes={@ORM\Index(columns={"data"}, flags={"fulltext"})})
  */
 class Item
 {
@@ -21,7 +23,7 @@ class Item
     private $id;
 
     /**
-     * @ORM\Column(type="text")
+     * @ORM\Column(type="encrypted")
      */
     private $data;
 
